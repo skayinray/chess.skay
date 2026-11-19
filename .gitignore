@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+build/
+*.AppImage
+.venv/
+venv/
+.DS_Store
