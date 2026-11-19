@@ -42,13 +42,20 @@
 
 ## Запуск
 
+Готовые сборки — в [релизах](https://github.com/skayinray/chess.skay/releases).
+
+Linux:
+
 ```bash
 chmod +x chess.skay-x86_64.AppImage
 ./chess.skay-x86_64.AppImage
 ```
 
+Windows 10/11 (x86_64): скачайте `chess.skay-windows-x86_64.exe` из релиза и
+запустите двойным кликом. Установка не нужна.
+
 AppImage не требует установки: внутри уже есть Python, PySide6, Qt,
-python-chess и оба набора фигур.
+python-chess и оба набора фигур. Windows-сборка — onefile EXE (PyInstaller).
 
 ## Сборка
 
@@ -70,4 +77,6 @@ src/
 tools/
   build_appimage.py    сборщик AppImage
   make_icon.py         генератор иконки
+.github/workflows/
+  build-windows.yml    сборка Windows EXE через GitHub Actions
 ```
