@@ -4,18 +4,18 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
   <name>chess.skay</name>
-  <summary>Шахматы с собственным движком, подсказками и часами</summary>
+  <summary>Offline chess with a local engine, clocks and hints</summary>
   <developer_name>skayinray</developer_name>
   <url type="homepage">https://github.com/skayinray/chess.skay</url>
   <description>
     <p>
-      chess.skay — десктопные шахматы для Linux: полные правила, собственный
-      движок на Python с четырьмя уровнями сложности, часы с прибавкой,
-      подсказки, разбор партии, сохранение в PGN и четыре темы доски.
+      chess.skay is a desktop chess application for Linux. It supports the full
+      rules of chess, a local Python engine with four difficulty levels, clocks
+      with increment, hints, PGN import and export, and five board themes.
     </p>
     <p>
-      Приложение полностью автономно: не требует установки Python, внешних
-      шахматных движков или доступа к сети.
+      The application is self-contained. It does not require a Python
+      installation, an external chess engine, or a network connection.
     </p>
   </description>
   <launchable type="desktop-id">chess.skay.desktop</launchable>
@@ -29,7 +29,7 @@
   <content_rating type="oars-1.1"/>
   <releases>
     <release version="1.0" date="2026-11-19">
-      <description><p>Первый выпуск chess.skay.</p></description>
+      <description><p>First release of chess.skay.</p></description>
     </release>
   </releases>
 </component>

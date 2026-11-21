@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Релиз, в который загрузить exe'
+        description: 'Release to upload the exe to'
         required: true
         default: 'v1.0.0'
   push:
@@ -12,11 +12,15 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,7 +33,8 @@ jobs:
       - name: Dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "PySide6==6.12.0" "chess==1.11.2" pyinstaller pillow
+          python -m pip install -r requirements.txt -r requirements-dev.txt
+          python -m pip install "pyinstaller==6.22.3" "pillow==11.3.0"
 
       - name: Icon
         run: >-
@@ -38,21 +43,72 @@ jobs:
           sizes=[(256,256),(128,128),(64,64),(48,48),(32,32),(16,16)])"
 
       - name: PyInstaller
-        run: >-
-          pyinstaller --noconfirm --clean --onefile --noconsole
-          --name chess.skay-windows-x86_64
-          --icon icon.ico
-          --add-data "src/resources;resources"
-          src/main.py
+        shell: pwsh
+        run: |
+          $excluded = @(
+            'PySide6.Qt3DCore', 'PySide6.Qt3DRender', 'PySide6.Qt3DInput',
+            'PySide6.Qt3DLogic', 'PySide6.Qt3DAnimation', 'PySide6.Qt3DExtras',
+            'PySide6.QtBluetooth', 'PySide6.QtCharts', 'PySide6.QtDataVisualization',
+            'PySide6.QtDesigner', 'PySide6.QtGraphs', 'PySide6.QtGraphsWidgets',
+            'PySide6.QtHelp', 'PySide6.QtHttpServer', 'PySide6.QtLocation',
+            'PySide6.QtMultimedia', 'PySide6.QtMultimediaWidgets', 'PySide6.QtNfc',
+            'PySide6.QtNetwork', 'PySide6.QtNetworkAuth', 'PySide6.QtPdf',
+            'PySide6.QtPdfWidgets', 'PySide6.QtPositioning', 'PySide6.QtPrintSupport',
+            'PySide6.QtQml', 'PySide6.QtQmlFeatures', 'PySide6.QtQuick',
+            'PySide6.QtQuick3D', 'PySide6.QtQuickControls2', 'PySide6.QtQuickTest',
+            'PySide6.QtQuickWidgets', 'PySide6.QtRemoteObjects', 'PySide6.QtScxml',
+            'PySide6.QtSensors', 'PySide6.QtSerialBus', 'PySide6.QtSerialPort',
+            'PySide6.QtSpatialAudio', 'PySide6.QtSql', 'PySide6.QtStateMachine',
+            'PySide6.QtTest', 'PySide6.QtTextToSpeech', 'PySide6.QtWebChannel',
+            'PySide6.QtWebEngineCore', 'PySide6.QtWebEngineQuick',
+            'PySide6.QtWebEngineWidgets', 'PySide6.QtWebSockets', 'PySide6.QtWebView',
+            'PySide6.QtLabsStyleKit', 'PySide6.QtCanvasPainter', 'PySide6.QtUiTools',
+            'PySide6.QtXml', 'PySide6.QtConcurrent', 'PySide6.QtDBus'
+          )
+          $pyinstallerArgs = @(
+            '--noconfirm', '--clean', '--onefile', '--noconsole',
+            '--name', 'chess.skay-windows-x86_64',
+            '--icon', 'icon.ico',
+            '--add-data', 'src/resources;resources'
+          )
+          foreach ($module in $excluded) {
+            $pyinstallerArgs += @('--exclude-module', $module)
+          }
+          $pyinstallerArgs += 'src/main.py'
+          pyinstaller @pyinstallerArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Sign release assets
+        shell: bash
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          python tools/sign_release.py sign "dist/chess.skay-windows-x86_64.exe"
+          python tools/sign_release.py verify "dist/chess.skay-windows-x86_64.exe" "dist/chess.skay-windows-x86_64.exe.sig"
+          mv dist/SHA256SUMS dist/SHA256SUMS-windows
+          mv dist/SHA256SUMS.sig dist/SHA256SUMS-windows.sig
+          python tools/sign_release.py verify dist/SHA256SUMS-windows dist/SHA256SUMS-windows.sig
 
       - name: Upload to release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-        run: gh release upload "$env:RELEASE_TAG" "dist/chess.skay-windows-x86_64.exe" --clobber
+        run: |
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
+            gh release create "$RELEASE_TAG" --generate-notes --title "$RELEASE_TAG"
+          gh release upload "$RELEASE_TAG" \
+            "dist/chess.skay-windows-x86_64.exe" \
+            "dist/chess.skay-windows-x86_64.exe.sig" \
+            "dist/SHA256SUMS-windows" \
+            "dist/SHA256SUMS-windows.sig" \
+            --clobber
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: chess.skay-windows-x86_64
-          path: dist/chess.skay-windows-x86_64.exe
+          path: |
+            dist/chess.skay-windows-x86_64.exe
+            dist/chess.skay-windows-x86_64.exe.sig
+            dist/SHA256SUMS-windows
+            dist/SHA256SUMS-windows.sig
